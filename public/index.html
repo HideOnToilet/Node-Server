@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Đăng nhập GitHub</title>
+  <style>
+    body {
+      font-family: 'Arial', sans-serif;
+      background-color: #f7f8fa;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+      margin: 0;
+    }
+
+    h1 {
+      font-size: 2rem;
+      color: #333;
+      margin-bottom: 20px;
+    }
+
+    #loginSection {
+      background-color: #fff;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+      width: 100%;
+      max-width: 400px;
+    }
+
+    .form-group {
+      margin-bottom: 15px;
+    }
+
+    .form-group label {
+      font-size: 1rem;
+      color: #555;
+    }
+
+    .form-group input {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      font-size: 1rem;
+      transition: border 0.3s ease;
+    }
+
+    .form-group input:focus {
+      border-color: #4caf50;
+      outline: none;
+    }
+
+    .form-group input[type="checkbox"] {
+      width: auto;
+      margin-top: 0;
+    }
+
+    button {
+      width: 100%;
+      padding: 12px;
+      background-color: #4caf50;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: background-color 0.3s;
+    }
+
+    button:hover {
+      background-color: #45a049;
+    }
+
+    .error-message {
+      color: red;
+      font-size: 0.9rem;
+      margin-top: 10px;
+    }
+
+  </style>
+</head>
+<body>
+  <div id="loginSection">
+    <h1>Đăng nhập GitHub</h1>
+    <form id="loginForm">
+      <div class="form-group">
+        <label for="username">Username:</label>
+        <input type="text" id="username" name="username" required placeholder="Nhập tên người dùng">
+      </div>
+      <div class="form-group">
+        <label for="token">Token:</label>
+        <input type="password" id="token" name="token" required placeholder="Nhập token">
+      </div>
+      <div class="form-group">
+        <label for="email">Gmail:</label>
+        <input type="email" id="email" name="email" required placeholder="Nhập email của bạn">
+      </div>
+      <div class="form-group">
+        <label for="rememberMe">Nhớ mật khẩu:</label>
+        <input type="checkbox" id="rememberMe" name="rememberMe">
+      </div>
+      <button type="submit">Đăng nhập</button>
+      <div class="error-message" id="error-message" style="display: none;">Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin.</div>
+    </form>
+  </div>
+
+  <script>
+    document.getElementById("loginForm").addEventListener("submit", async function(event) {
+      event.preventDefault();
+      
+      const username = document.getElementById("username").value;
+      const token = document.getElementById("token").value;
+      const email = document.getElementById("email").value;
+      const rememberMe = document.getElementById("rememberMe").checked;
+
+      try {
+        const encodedToken = btoa(token);
+        
+        const loginResponse = await fetch("/login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${encodedToken}`
+          },
+          body: JSON.stringify({ username, email })
+        });
+
+        if (loginResponse.ok) {
+          if (rememberMe) {
+            sessionStorage.setItem('githubData', JSON.stringify({
+              username,
+              token: encodedToken,
+              email
+            }));
+          } else {
+            sessionStorage.removeItem('githubData');
+          }
+
+          // Chuyển hướng đến trang view.html khi đăng nhập thành công
+          window.location.href = "view.html";
+        } else {
+          throw new Error('Đăng nhập thất bại');
+        }
+      } catch (error) {
+        console.error("Lỗi:", error);
+        document.getElementById("error-message").style.display = 'block';
+      }
+    });
+  </script>
+</body>
+</html>

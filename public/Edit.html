@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản lý Repository</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            background: #f5f5f5;
+        }
+
+        header {
+            background: #2c3e50;
+            color: #fff;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .container {
+            max-width: 2200px;
+            margin: 0 auto;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        section {
+            background: #fff;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            color: #2c3e50;
+            margin-bottom: 15px;
+            border-bottom: 2px solid #eee;
+            padding-bottom: 10px;
+        }
+
+        .toggle-btn {
+            background: none;
+            border: none;
+            color: #3498db;
+            cursor: pointer;
+            padding: 5px;
+            font-size: 1.2em;
+        }
+
+        #file-tree {
+            min-height: 200px;
+            border: 1px solid #ddd;
+            padding: 10px;
+            border-radius: 4px;
+            transition: height 0.3s ease;
+            overflow: auto;
+        }
+
+        #file-tree.collapsed {
+            height: 0;
+            min-height: 0;
+            padding: 0;
+            overflow: hidden;
+        }
+
+        #file-tree ul {
+            list-style: none;
+            margin-left: 20px;
+        }
+
+        #file-tree li {
+            padding: 5px 0;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            position: relative;
+        }
+
+        #file-tree li:before {
+            content: '📄';
+            margin-right: 5px;
+        }
+
+        #file-tree li.directory:before {
+            content: '📁';
+        }
+
+        #file-tree li.directory.open:before {
+            content: '📂';
+        }
+
+        #file-tree li:hover {
+            color: #3498db;
+            background-color: #f8f9fa;
+        }
+
+        #file-tree li > ul {
+            display: none;
+        }
+
+        #file-tree li.open > ul {
+            display: block;
+        }
+
+        textarea#file-text {
+            width: 100%;
+            min-height: 300px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            margin-bottom: 10px;
+            font-family: monospace;
+        }
+
+        button {
+            background: #3498db;
+            color: #fff;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #2980b9;
+        }
+
+        input[type="text"],
+        input[type="password"],
+        input[type="file"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+        }
+
+        #setup-database-form {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        #upload-status {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+        }
+
+        .selected-file {
+            background-color: #e3f2fd !important;
+            border-radius: 4px;
+        }
+
+        .file-path {
+            font-size: 0.8em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            section {
+                margin-bottom: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>Quản lý Repository</h1>
+    </header>
+
+    <div class="container">
+        <section id="file-tree-container">
+            <div class="section-header">
+                <h3>Cấu trúc thư mục</h3>
+                <button class="toggle-btn" onclick="toggleFileTree()">▼</button>
+            </div>
+            <div id="file-tree"></div>
+            <div class="file-path" id="current-path"></div>
+        </section>
+
+        <section id="file-content">
+            <h3>Chỉnh sửa file</h3>
+            <textarea id="file-text" readonly></textarea>
+            <div class="button-group">
+                <button id="save-changes" style="display:none;">Lưu thay đổi</button>
+                <button id="setup-database">Setup Database</button>
+                <button id="create-project-github">Tạo Project lên Github</button>
+            </div>
+        </section>
+
+        <section id="setup-database-form" style="display: none;">
+            <h3>Cấu hình Database trong docker-compose.yml</h3>
+            <form>
+                <label for="db-name">Database Name:</label>
+                <input type="text" id="db-name">
+                
+                <label for="db-user">Database User:</label>
+                <input type="text" id="db-user">
+                
+                <label for="db-password">Database Password:</label>
+                <input type="password" id="db-password">
+                
+                <label for="db-root-password">Root Password:</label>
+                <input type="password" id="db-root-password">
+                
+                <button type="button" onclick="saveDatabaseConfig()">Lưu cấu hình</button>
+            </form>
+        </section>
+
+        <section id="upload-database-file">
+            <h3>Tải lên file cơ sở dữ liệu</h3>
+            <form id="upload-form">
+                <input type="file" id="databasefile" name="databasefile" accept=".sql,.db,.sqlite">
+                <button type="button" onclick="uploadDatabaseFile()">Tải lên</button>
+            </form>
+            <p id="upload-status"></p>
+        </section>
+    </div>
+
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const repoName = urlParams.get('repoName');
+
+        if (!repoName) {
+            alert('Không có repoName trong URL!');
+            window.location.href = '/';
+        }
+
+        let selectedFilePath = '';
+
+        function toggleFileTree() {
+            const fileTree = document.getElementById('file-tree');
+            const toggleBtn = document.querySelector('.toggle-btn');
+            
+            fileTree.classList.toggle('collapsed');
+            toggleBtn.textContent = fileTree.classList.contains('collapsed') ? '▲' : '▼';
+        }
+
+        function updateCurrentPath(filePath) {
+            document.getElementById('current-path').textContent = filePath || '';
+        }
+
+        // Render cấu trúc thư mục
+        const renderFileTree = (fileTree, parentElement, basePath = '') => {
+            const ul = document.createElement('ul');
+            fileTree.forEach(file => {
+                const li = document.createElement('li');
+                const currentPath = basePath ? `${basePath}/${file.name}` : file.name;
+                li.className = file.isDirectory ? 'directory' : 'file';
+                li.textContent = file.name;
+                
+                li.onclick = (e) => {
+                    e.stopPropagation();
+                    if (file.isDirectory) {
+                        li.classList.toggle('open');
+                    } else {
+                        // Remove selected class from all items
+                        document.querySelectorAll('#file-tree li').forEach(el => {
+                            el.classList.remove('selected-file');
+                        });
+                        // Add selected class to clicked item
+                        li.classList.add('selected-file');
+                        updateCurrentPath(currentPath);
+                        loadFileContent(file);
+                    }
+                };
+                
+                ul.appendChild(li);
+
+                if (file.isDirectory && file.children.length > 0) {
+                    renderFileTree(file.children, li, currentPath);
+                }
+            });
+            parentElement.appendChild(ul);
+        };
+
+        const loadFileTree = async () => {
+            const response = await fetch(`/api/project-file-tree?repoName=${encodeURIComponent(repoName)}`);
+            if (response.ok) {
+                const fileTree = await response.json();
+                renderFileTree(fileTree, document.getElementById('file-tree'));
+            } else {
+                console.error('Lỗi khi lấy cấu trúc thư mục');
+            }
+        };
+
+        const loadFileContent = async (file) => {
+            if (!file.isDirectory) {
+                const response = await fetch(`/api/project-file?filePath=${encodeURIComponent(file.path)}&repoName=${encodeURIComponent(repoName)}`);
+                if (response.ok) {
+                    const content = await response.text();
+                    document.getElementById('file-text').value = content;
+                    document.getElementById('file-text').readOnly = false;
+                    document.getElementById('save-changes').style.display = 'inline-block';
+                    document.getElementById('save-changes').onclick = () => saveFileChanges(file);
+
+                    // Lưu lại đường dẫn file được chọn
+                    selectedFilePath = file.path;
+                } else {
+                    alert('Không thể tải nội dung file');
+                }
+            }
+        };
+
+        const saveFileChanges = async (file) => {
+            const newContent = document.getElementById('file-text').value;
+            const response = await fetch('/api/save-file', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    filePath: file.path,
+                    content: newContent,
+                    repoName: repoName 
+                })
+            });
+            if (response.ok) {
+                alert('Đã lưu thay đổi!');
+                document.getElementById('file-text').readOnly = true;
+                document.getElementById('save-changes').style.display = 'none';
+            } else {
+                alert('Lỗi khi lưu thay đổi');
+            }
+        };
+
+        // Setup Database
+        document.getElementById("setup-database").onclick = () => {
+            document.getElementById("setup-database-form").style.display = "block";
+        };
+
+        const saveDatabaseConfig = async () => {
+            const dbName = document.getElementById('db-name').value;
+            const dbUser = document.getElementById('db-user').value;
+            const dbPassword = document.getElementById('db-password').value;
+            const dbRootPassword = document.getElementById('db-root-password').value;
+
+            const response = await fetch('/api/save-database-config', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    repoName,
+                    dbName,
+                    dbUser,
+                    dbPassword,
+                    dbRootPassword
+                })
+            });
+            if (response.ok) {
+                alert('Cấu hình database đã được lưu.');
+            } else {
+                alert('Lỗi khi lưu cấu hình database.');
+            }
+        };
+
+        // Tạo Project trên Github
+        document.getElementById("create-project-github").onclick = async () => {
+            try {
+                const username = urlParams.get('username');
+                const token = urlParams.get('token');
+
+                if (!username || !token) {
+                    alert('Thông tin không hợp lệ');
+                    return;
+                }
+
+                const data = {
+                    repoName,
+                    username,
+                    token
+                };
+
+                const response = await fetch("/upload-code-to-github", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(data)
+                });
+
+                const result = await response.json();
+                if (response.ok) {
+                    alert('Repository đã được tạo thành công!');
+                } else {
+                    alert(`Lỗi: ${result.error}`);
+                }
+            } catch (error) {
+                console.error("Lỗi khi tạo repository:", error);
+                alert("Đã xảy ra lỗi khi tạo repository.");
+            }
+        };
+
+        // Tải lên file cơ sở dữ liệu
+        const uploadDatabaseFile = async () => {
+            const form = document.getElementById("upload-form");
+            const formData = new FormData(form);
+            formData.append("repoName", repoName);
+
+            const response = await fetch('/upload-databasefile', {
+                method: 'POST',
+                body: formData
+            });
+
+            const statusElement = document.getElementById("upload-status");
+            if (response.ok) {
+                statusElement.textContent = 'Tải lên thành công!';
+                statusElement.style.backgroundColor = '#4caf50';
+                statusElement.style.color = 'white';
+            } else {
+                const errorText = await response.text();
+                statusElement.textContent = 'Lỗi khi tải lên: ' + errorText;
+                statusElement.style.backgroundColor = '#f44336';
+                statusElement.style.color = 'white';
+            }
+        };
+
+        // Initialize
+        loadFileTree();
+    </script>
+</body>
+</html>
